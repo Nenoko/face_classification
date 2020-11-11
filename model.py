@@ -12,7 +12,6 @@ class face_classifier(nn.Module):
         super(face_classifier, self).__init__()
         #face_stream_length = 25
         # models
-        # 本当はLSTMを使いたいけどdenseで差し替える
         self.lstm = nn.LSTM(input_size, hidden_size,
                             num_layers, batch_first=True)
         #self.hidden = nn.Linear(input_size * face_stream_length, hidden_size)
@@ -28,4 +27,4 @@ class face_classifier(nn.Module):
         return F.softmax(dense_output, dim=1)
 
 
-print(face_classifier)
+# print(face_classifier)

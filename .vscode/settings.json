@@ -12,5 +12,5 @@
     "python.formatting.provider": "autopep8",
     "editor.formatOnSave": true,
     "editor.formatOnPaste": false,
-    "python.pythonPath": "/home/kondo/.pyenv/versions/face_recognition/bin/python3"
+    "python.pythonPath": "/usr/local/var/pyenv/versions/face_classification/bin/python"
 }
