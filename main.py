@@ -14,6 +14,7 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from matplotlib.ticker import *
 
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -46,14 +47,14 @@ def train():
     train_size = n_samples * 9 // 10
     test_size = n_samples - train_size
 
-    print("train_size = {}".format(train_size))
-    print("test_size = {}".format(test_size))
+    print("original_train_size = {}".format(train_size))
+    print("original_test_size = {}".format(test_size))
 
     ds = TensorDataset(train_x, train_t)
     ds_train, ds_test = torch.utils.data.random_split(
         ds, [train_size, test_size])
 
-    TRAIN_BATCH_SIZE = train_size // 20
+    TRAIN_BATCH_SIZE = train_size // 30
     # TEST_BATCH_SIZE = test_size // 20
     # TRAIN_BATCH_SIZE = 1
     TEST_BATCH_SIZE = 1
@@ -71,7 +72,6 @@ def train():
     # num_layers  ... レイヤー数　今回は表情点列（可変長）の最大長になる
     NUM_LAYERS = 1  # len(train_x[0])
     # input_size, hidden_size, num_layers, class_size):
-    NUM_LAYERS = 50
     HIDDEN_SIZE = 100
     CLASS_SIZE = 3
     EPOCHS_NUM = 20
@@ -80,8 +80,10 @@ def train():
     #summary(model, input_size=(25, 68*2))
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = Adam(model.parameters(), lr=0.01)  # 最適化関数の宣言
-    # optimizer = SGD(model.parameters(), lr=0.1, momentum=0.9)  # 最適化関数の宣言
+    lr = 0.01
+    #lr = 0.1
+    # optimizer = Adam(model.parameters(), lr=lr)  # 最適化関数の宣言
+    optimizer = SGD(model.parameters(), lr=lr, momentum=0.9)  # 最適化関数の宣言
 
     # debug
     training_loss_list = []
@@ -92,6 +94,7 @@ def train():
 
     total_acc = []
     train_conf_mat = [[0 for _ in range(CLASS_SIZE)]for _ in range(CLASS_SIZE)]
+    test_conf_mat = [[0 for _ in range(CLASS_SIZE)]for _ in range(CLASS_SIZE)]
 
     for epoch in range(EPOCHS_NUM):
         # training
@@ -116,6 +119,8 @@ def train():
             # 正解率の計算
             batch_accuracy = [torch.argmax(o).item() == label[i]
                               for i, o in enumerate(output)].count(True) / len(label)
+            train_conf_mat = [
+                [0 for _ in range(CLASS_SIZE)]for _ in range(CLASS_SIZE)]
             for i, o_ in enumerate(output):
                 o = torch.argmax(o_).item()
                 train_conf_mat[o][label[i].item()] += 1
@@ -125,7 +130,7 @@ def train():
         accuracy = sum(total_acc)/len(total_acc) * 100
         if epoch % PRINT_EPOCH == 0:
 
-            print('%d training loss: %.3f , accuracy=%.3f' %
+            print('%d training loss: %.7f , accuracy=%.7f' %
                   (epoch, running_loss, accuracy))
         training_loss_list.append(running_loss)
         training_accuracy_list.append(accuracy)
@@ -155,13 +160,41 @@ def train():
 
         accuracy = sum(total_acc) / len(total_acc) * 100
         if epoch % PRINT_EPOCH == 0:
-            print('%d test loss: %.3f , accuracy=%.3f' %
+            print('%d test loss: %.7f , accuracy=%.7f' %
                   (epoch, running_loss, accuracy))
         test_loss_list.append(running_loss)
         test_accuracy_list.append(accuracy)
 
-    # print(training_loss_list)
-    # print(test_loss_list)
+    train_conf_mat = [
+        [0 for _ in range(CLASS_SIZE)]for _ in range(CLASS_SIZE)]
+    for data, label in loader_train:
+
+        if len(data) < TRAIN_BATCH_SIZE:
+            break
+
+        data = torch.FloatTensor(data)
+        label = torch.LongTensor(label)
+        output = model(data)
+
+        for i, o_ in enumerate(output):
+            o = torch.argmax(o_).item()
+            train_conf_mat[o][label[i].item()] += 1
+
+    test_conf_mat = [
+        [0 for _ in range(CLASS_SIZE)]for _ in range(CLASS_SIZE)]
+    for data, label in loader_test:
+
+        if len(data) < TEST_BATCH_SIZE:
+            break
+
+        data = torch.FloatTensor(data)
+        label = torch.LongTensor(label)
+        output = model(data)
+
+        for i, o_ in enumerate(output):
+            o = torch.argmax(o_).item()
+            test_conf_mat[o][label[i].item()] += 1
+
     with open('./training_loss.pkl', 'wb') as f:
         torch.save(training_loss_list, f)
     with open('./test_loss.pkl', 'wb') as f:
@@ -170,6 +203,8 @@ def train():
         torch.save(training_accuracy_list, f)
     with open('./test_accuracy.pkl', 'wb') as f:
         torch.save(test_accuracy_list, f)
+    with open('./model_main.pth', 'wb') as f:
+        torch.save(model, f)
 
     draw(training_loss_list, "training_loss", "loss")
     draw(test_loss_list, "test_loss", "loss")
@@ -177,6 +212,24 @@ def train():
     draw(test_accuracy_list, "test_accuracy", "accuracy[%]")
 
     print(train_conf_mat)
+
+    plt.clf()  # 初期化
+    ziku = ['Positive', 'Neutral', 'Negative']
+    df = pd.DataFrame(data=train_conf_mat, index=ziku, columns=ziku)
+    sns.heatmap(df, cmap='Blues', annot=True, fmt="d")
+    plt.xlabel("true label")
+    plt.ylabel("predict")
+    plt.savefig('confusion_matrix_NN_train.png')
+
+    print(test_conf_mat)
+
+    plt.clf()  # 初期化
+    ziku = ['Positive', 'Neutral', 'Negative']
+    df = pd.DataFrame(data=test_conf_mat, index=ziku, columns=ziku)
+    sns.heatmap(df, cmap='OrRd', annot=True, fmt="d")
+    plt.xlabel("true label")
+    plt.ylabel("predict")
+    plt.savefig('confusion_matrix_NN.png')
 
 
 def draw(data, title, ylabel):
@@ -187,6 +240,8 @@ def draw(data, title, ylabel):
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
+    plt.gca().get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+    plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
     if "accuracy" in title:
         plt.ylim = (min(data) - 0.5, max(data) + 0.5)
     plt.savefig("{}.png".format(title))

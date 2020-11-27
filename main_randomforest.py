@@ -26,19 +26,6 @@ from torchsummary import summary
 PRINT_EPOCH = 2
 
 
-def print_cmx(y_true, y_pred):
-    y_true_np = y_true.to('cpu').detach().numpy().copy()
-    y_pred_np = y_pred.to('cpu').detach().numpy().copy()
-    labels = sorted(list(set(y_true_np)))
-    cmx_data = confusion_matrix(y_true_np, y_pred_np, labels=labels)
-
-    df_cmx = pd.DataFrame(cmx_data, index=labels, columns=labels)
-
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(df_cmx, annot=True)
-    plt.show()
-
-
 def train():
     # device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     train_x, train_t = torch.load('./classifier_train_data.pkl')
@@ -86,39 +73,53 @@ def train():
 #        if x % 100 == 0:
 #            print(x)
     X_train, X_test, t_train, t_test = train_test_split(
-        train_x_ndarray, train_t_ndarray, random_state=74648, test_size=TEST_SIZE)
+        # train_x_ndarray, train_t_ndarray, random_state=74648, test_size=TEST_SIZE)
+        train_x_ndarray, train_t_ndarray,  test_size=TEST_SIZE)
 
     TRAIN_BATCH_SIZE = train_size // 20
     TEST_BATCH_SIZE = 1
 
     NUM_LAYERS = 1  # len(train_x[0])
 
-    clf = RandomForestClassifier(max_depth=3, random_state=0)
+    clf = RandomForestClassifier(max_depth=5, random_state=0)
 
     clf.fit(X_train, t_train)
 
+    plt.clf()
     pred = clf.predict(X_train)
     acc = [p == t_train[i] for i, p in enumerate(pred)].count(True)/len(pred)
     cm = confusion_matrix(pred, t_train)
-    sns.heatmap(cm)
+    ziku = ['Positive', 'Neutral', 'Negative']
+    df = pd.DataFrame(data=cm, index=ziku, columns=ziku)
+    sns.heatmap(df, cmap='Blues', annot=True, fmt="d")
     plt.xlabel("true label")
     plt.ylabel("predict")
+    plt.gca().get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+    plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
     plt.savefig('confusion_matrix_randomforest_train.png')
     print(acc)
     print(cm)
 
+    cm = None
+
+    plt.clf()
     pred = clf.predict(X_test)
     acc = [p == t_test[i] for i, p in enumerate(pred)].count(True)/len(pred)
-
     cm = confusion_matrix(pred, t_test)
-    sns.heatmap(cm)
+    ziku = ['Positive', 'Neutral', 'Negative']
+    df = pd.DataFrame(data=cm, index=ziku, columns=ziku)
+    sns.heatmap(df, cmap='OrRd', annot=True, fmt="d")
     plt.xlabel("true label")
     plt.ylabel("predict")
+    plt.gca().get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+    plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
     plt.savefig('confusion_matrix_randomforest.png')
 
     print(acc)
     print(cm)
-    exit()
+
+    with open('./model_randomforest.pth', 'wb') as f:
+        torch.save(clf, f)
 
 
 if __name__ == "__main__":

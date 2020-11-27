@@ -65,7 +65,8 @@ def train():
 #        if x % 100 == 0:
 #            print(x)
     X_train, X_test, t_train, t_test = train_test_split(
-        train_x_ndarray, train_t_ndarray, random_state=74648, test_size=TEST_SIZE)
+        # train_x_ndarray, train_t_ndarray, random_state=74648, test_size=TEST_SIZE)
+        train_x_ndarray, train_t_ndarray,  test_size=TEST_SIZE)
 
     TRAIN_BATCH_SIZE = train_size // 20
     TEST_BATCH_SIZE = 1
@@ -80,9 +81,13 @@ def train():
     pred = clf.predict(X_train)
     acc = [p == t_train[i] for i, p in enumerate(pred)].count(True)/len(pred)
     cm = confusion_matrix(pred, t_train)
-    sns.heatmap(cm)
+    ziku = ['Positive', 'Neutral', 'Negative']
+    df = pd.DataFrame(data=cm, index=ziku, columns=ziku)
+    sns.heatmap(df, cmap='Blues', annot=True, fmt="d")
     plt.xlabel("true label")
     plt.ylabel("predict")
+    plt.gca().get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+    plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
     plt.savefig('confusion_matrix_svm_train.png')
     print(acc)
     print(cm)
@@ -91,14 +96,19 @@ def train():
     acc = [p == t_test[i] for i, p in enumerate(pred)].count(True)/len(pred)
 
     cm = confusion_matrix(pred, t_test)
-    sns.heatmap(cm)
+    ziku = ['Positive', 'Neutral', 'Negative']
+    df = pd.DataFrame(data=cm, index=ziku, columns=ziku)
+    sns.heatmap(df, cmap='OrRd', annot=True, fmt="d")
     plt.xlabel("true label")
     plt.ylabel("predict")
+    plt.gca().get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
+    plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
     plt.savefig('confusion_matrix_svm.png')
     print("")
     print(acc)
     print(cm)
-    exit()
+    with open('./model_svm.pth', 'wb') as f:
+        torch.save(clf, f)
 
 
 if __name__ == "__main__":
