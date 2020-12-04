@@ -216,6 +216,7 @@ def train():
     plt.clf()  # 初期化
     ziku = ['Positive', 'Neutral', 'Negative']
     df = pd.DataFrame(data=train_conf_mat, index=ziku, columns=ziku)
+    sns.set(font_scale=3.0)
     sns.heatmap(df, cmap='Blues', annot=True, fmt="d")
     plt.xlabel("true label")
     plt.ylabel("predict")
@@ -226,10 +227,11 @@ def train():
     plt.clf()  # 初期化
     ziku = ['Positive', 'Neutral', 'Negative']
     df = pd.DataFrame(data=test_conf_mat, index=ziku, columns=ziku)
+    sns.set(font_scale=3.0)
     sns.heatmap(df, cmap='OrRd', annot=True, fmt="d")
     plt.xlabel("true label")
     plt.ylabel("predict")
-    plt.savefig('confusion_matrix_NN.png')
+    plt.savefig('confusion_matrix_NN_test.png')
 
 
 def draw(data, title, ylabel):

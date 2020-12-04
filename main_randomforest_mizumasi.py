@@ -1,19 +1,25 @@
+import torch
+from torch import nn
+from torch.optim import SGD, Adam
+# from torch.utils.data.dataset import Subset
+import torch.nn.utils.rnn as rnn
+#import torch.nn.functional as F
+from model import face_classifier
 # from params import *
 import numpy as np
-
-import torch
 
 import pandas as pd
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
-from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
+
+from torch.nn.utils.rnn import pad_sequence
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-import seaborn as sns
-from torchsummary import summary
+from tqdm import tqdm
 
 PRINT_EPOCH = 2
 
@@ -27,45 +33,46 @@ def train():
     train_t_messed_up = []
     min_wide = 10
 
-    for x_, t_ in zip(train_x, train_t):
-        for startpoint in range(0, len(x_)-1-min_wide):
-            # 時系列の並びを維持したまま窓で切り抜く
-            for endpoint in range(len(x_)-min_wide, len(x_)):
-
-                tmpx = x_[startpoint:endpoint]
-
-                train_x_messed_up.append(tmpx)
-                train_t_messed_up.append(t_)
+    # for x_, t_ in tqdm(zip(train_x, train_t)):
+    #    for startpoint in range(0, len(x_) - 1 - min_wide):
+    #        # 時系列の並びを維持したまま窓で切り抜く
+    #        for endpoint in range(len(x_) - min_wide, len(x_)):
+    #
+    #            tmpx = x_[startpoint:endpoint]
+    #
+    #            train_x_messed_up.append(tmpx)
+    #            train_t_messed_up.append(t_)
+    for x_, t_ in tqdm(zip(train_x, train_t)):
+        for startpoint in range(0, len(x_) - 1 - min_wide):
+            endpoint = startpoint + min_wide
+            tmpx = x_[startpoint:endpoint]
+            train_x_messed_up.append(tmpx)
+            train_t_messed_up.append(t_)
 
     train_x = train_x_messed_up
     train_t = train_t_messed_up
+
     # BATCH_SIZE=1
 
     # CVのための分割点決め
     n_samples = len(train_x)
     train_size = n_samples * 9 // 10
-    test_size = n_samples - train_size
+    #test_size = n_samples - train_size
 
-    #ds = TensorDataset(train_x, train_t)
-    # ds_train, ds_test = torch.utils.data.random_split(
-    #        ds, [train_size, test_size])
-
-    train_x_ndarray = torch.cat(train_x).to('cpu').detach().numpy().copy()
+    train_x_ndarray = torch.stack(train_x).to('cpu').detach().numpy().copy()
     train_x_ndarray_ = []
     for hatuwa in train_x_ndarray:
         train_x_ndarray_.append(np.mean(hatuwa, axis=0))
     train_x_ndarray = train_x_ndarray_
 
-    train_t_ndarray = torch.Tensoro(train_t).to('cpu').detach().numpy().copy()
-
-    あああ
+    train_t_ndarray = torch.stack(train_t).to('cpu').detach().numpy().copy()
 
     TEST_SIZE = 0.1
-    #mindist = 5
-    #minseed = 6900
-    #minzero = 15
-    #minone = 20
-    #mintwo = 20
+    mindist = 5
+    minseed = 6900
+    minzero = 15
+    minone = 20
+    mintwo = 20
 #
 #    for x in range(50000, 100000):
 #        X_train, X_test, t_train, t_test = train_test_split(
@@ -92,11 +99,11 @@ def train():
 
     NUM_LAYERS = 1  # len(train_x[0])
 
-    #clf = SVC(kernel='linear', random_state=None, verbose=2)
-    clf = SVC(kernel='rbf', random_state=None, verbose=2)
+    clf = RandomForestClassifier(max_depth=5, random_state=0)
 
     clf.fit(X_train, t_train)
 
+    plt.clf()
     pred = clf.predict(X_train)
     acc = [p == t_train[i] for i, p in enumerate(pred)].count(True)/len(pred)
     cm = confusion_matrix(pred, t_train)
@@ -107,13 +114,15 @@ def train():
     plt.ylabel("predict")
     plt.gca().get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
     plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
-    plt.savefig('confusion_matrix_svm_train.png')
+    plt.savefig('confusion_matrix_randomforest_train.png')
     print(acc)
     print(cm)
 
+    cm = None
+
+    plt.clf()
     pred = clf.predict(X_test)
     acc = [p == t_test[i] for i, p in enumerate(pred)].count(True)/len(pred)
-
     cm = confusion_matrix(pred, t_test)
     ziku = ['Positive', 'Neutral', 'Negative']
     df = pd.DataFrame(data=cm, index=ziku, columns=ziku)
@@ -122,11 +131,12 @@ def train():
     plt.ylabel("predict")
     plt.gca().get_xaxis().set_major_locator(ticker.MaxNLocator(integer=True))
     plt.gca().get_yaxis().set_major_locator(ticker.MaxNLocator(integer=True))
-    plt.savefig('confusion_matrix_svm.png')
-    print("")
+    plt.savefig('confusion_matrix_randomforest.png')
+
     print(acc)
     print(cm)
-    with open('./model_svm.pth', 'wb') as f:
+
+    with open('./model_randomforest.pth', 'wb') as f:
         torch.save(clf, f)
 
 

@@ -50,15 +50,25 @@ def train():
     train_t_messed_up = []
     min_wide = 10
 
-    for x_, t_ in zip(train_x, train_t):
-        for startpoint in range(0, len(x_)-1-min_wide):
-            # 時系列の並びを維持したまま窓で切り抜く
-            for endpoint in range(len(x_)-min_wide, len(x_)):
+#    for x_, t_ in zip(train_x, train_t):
+#        for startpoint in range(0, len(x_)-1-min_wide):
+#            # 時系列の並びを維持したまま窓で切り抜く
+#            for endpoint in range(len(x_)-min_wide, len(x_)):
+#
+#                tmpx = x_[startpoint:endpoint]
+#
+#                train_x_messed_up.append(tmpx)
+#                train_t_messed_up.append(t_)
 
-                tmpx = x_[startpoint:endpoint]
+    for x_, t_ in tqdm(zip(train_x, train_t)):
+        for startpoint in range(0, len(x_) - 1 - min_wide):
+            endpoint = startpoint + min_wide
+            tmpx = x_[startpoint:endpoint]
+            train_x_messed_up.append(tmpx)
+            train_t_messed_up.append(t_)
 
-                train_x_messed_up.append(tmpx)
-                train_t_messed_up.append(t_)
+    train_x = train_x_messed_up
+    train_t = train_t_messed_up
 
     train_x = train_x_messed_up
     train_t = train_t_messed_up
