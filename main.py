@@ -203,7 +203,7 @@ def train():
         torch.save(training_accuracy_list, f)
     with open('./test_accuracy.pkl', 'wb') as f:
         torch.save(test_accuracy_list, f)
-    with open('./model_main.pth', 'wb') as f:
+    with open('./model/main.pth', 'wb') as f:
         torch.save(model, f)
 
     draw(training_loss_list, "training_loss", "loss")

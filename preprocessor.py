@@ -1,9 +1,8 @@
 import torch
-import re
-from torch import nn
 import torch.nn.utils.rnn as rnn
 from params import TARGET_CLASS
 import itertools
+from tqdm import tqdm
 
 # 顔→ネガ/ポジ/無のペアデータセットを作成
 
@@ -102,6 +101,24 @@ def preprocess():
     y_list = torch.tensor(y_list, dtype=torch.long)
 
     with open("./classifier_train_data.pkl", "wb") as f:
+        torch.save([x_list, y_list], f)
+
+    # generatedと同様の方法で水増しする
+    train_x_messed_up = []
+    train_t_messed_up = []
+    min_wide = 10
+
+    for x_, t_ in tqdm(zip(x_list, y_list)):
+        for startpoint in range(0, len(x_) - 1 - min_wide):
+            endpoint = startpoint + min_wide
+            tmpx = x_[startpoint:endpoint]
+            train_x_messed_up.append(tmpx)
+            train_t_messed_up.append(t_)
+
+    x_list = train_x_messed_up
+    y_list = train_t_messed_up
+
+    with open("./classifier_train_data_mizumasi.pkl", "wb") as f:
         torch.save([x_list, y_list], f)
 
 
