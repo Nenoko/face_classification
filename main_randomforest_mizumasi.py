@@ -1,20 +1,11 @@
-import torch
-from torch import nn
-from torch.optim import SGD, Adam
-# from torch.utils.data.dataset import Subset
-import torch.nn.utils.rnn as rnn
-#import torch.nn.functional as F
-from model import face_classifier
-# from params import *
 import numpy as np
+import torch
 
 import pandas as pd
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-
-from torch.nn.utils.rnn import pad_sequence
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
@@ -33,20 +24,12 @@ def train():
     train_t_messed_up = []
     min_wide = 10
 
-    # for x_, t_ in tqdm(zip(train_x, train_t)):
-    #    for startpoint in range(0, len(x_) - 1 - min_wide):
-    #        # 時系列の並びを維持したまま窓で切り抜く
-    #        for endpoint in range(len(x_) - min_wide, len(x_)):
-    #
-    #            tmpx = x_[startpoint:endpoint]
-    #
-    #            train_x_messed_up.append(tmpx)
-    #            train_t_messed_up.append(t_)
     for x_, t_ in tqdm(zip(train_x, train_t)):
         for startpoint in range(0, len(x_) - 1 - min_wide):
             endpoint = startpoint + min_wide
             tmpx = x_[startpoint:endpoint]
-            train_x_messed_up.append(tmpx)
+            # train_x_messed_up.append(tmpx)
+            train_x_messed_up.append(tmpx[:, 16 * 2:])
             train_t_messed_up.append(t_)
 
     train_x = train_x_messed_up
@@ -57,7 +40,7 @@ def train():
     # CVのための分割点決め
     n_samples = len(train_x)
     train_size = n_samples * 9 // 10
-    #test_size = n_samples - train_size
+    # test_size = n_samples - train_size
 
     train_x_ndarray = torch.stack(train_x).to('cpu').detach().numpy().copy()
     train_x_ndarray_ = []
@@ -102,6 +85,58 @@ def train():
     clf = RandomForestClassifier(max_depth=5, random_state=0)
 
     clf.fit(X_train, t_train)
+
+    # Feature Importance
+    fti = clf.feature_importances_
+#   feature_dict = dict(zip(["{}x".format(
+#       i // 2) if i % 2 == 0 else "{}y".format(i // 2 + 1) for i in range(len(fti))], fti))
+#   feature_dict = list(
+#       reversed(sorted(feature_dict.items(), key=lambda x: x[1])))
+#
+#   print('Feature Importances:')
+#    for i, feat in (feature_dict):
+#        # 表示限界
+#        if feat < 0.1**6:
+#            break
+#        print('\t{0:20s} : {1:>.6f}'.format(i, feat))
+
+    fti_sum = [fti[2 * i] + fti[2 * i + 1]for i in range(len(fti) // 2)]
+
+    feature_dict = dict(zip([i for i in range(len(fti))], fti_sum))
+    feature_dict = list(
+        reversed(sorted(feature_dict.items(), key=lambda x: x[1])))
+
+    print('Feature Importances:')
+    for i, feat in (feature_dict):
+        # 表示限界
+        if feat < 0.1**6:
+            break
+        print('\t{0:20d} : {1:>.6f}'.format(i, feat))
+
+    # 棒グラフを描く
+    feature_dict_key = [str(int(key)) for key, val in feature_dict]
+    feature_dict_val = [val * 100 for key, val in feature_dict]
+
+    display_limit = 0
+    tmp_sum = 0
+    for j, val in enumerate(feature_dict_val):
+        tmp_sum += val
+        if j == 15:
+            print(tmp_sum)
+        if tmp_sum > 99:
+            display_limit = j
+            break
+    print(display_limit)
+    feature_dict_key = feature_dict_key[:display_limit]
+    feature_dict_val = feature_dict_val[:display_limit]
+
+    with open("feature_dict.pkl", "wb") as f:
+        torch.save([feature_dict_key, feature_dict_val], f)
+
+    plt.clf()
+    #plt.bar(feature_dict_key, feature_dict_val)
+    plt.bar(feature_dict_key[:15], feature_dict_val[:15], color='orange')
+    plt.show()
 
     plt.clf()
     pred = clf.predict(X_train)

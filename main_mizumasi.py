@@ -2,8 +2,8 @@ import sys
 import torch
 from torch import nn
 from torch.optim import SGD, Adam
+from torch.utils.data import DataLoader, TensorDataset
 from model import face_classifier
-
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -25,7 +25,12 @@ def train():
     train_size = n_samples * 9 // 10
 
     ds = list(zip(train_x, train_t))
-    # 混ぜる
+    if mizumasi:
+        ds = TensorDataset(train_x, train_t)
+        ds_train, ds_test = torch.utils.data.random_split(
+            ds, [train_size, test_size])
+
+        # 混ぜる
     random.shuffle(ds)
 
     # split

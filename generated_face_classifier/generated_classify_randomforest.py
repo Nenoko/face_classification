@@ -41,6 +41,8 @@ for kind_of_data, kind_of_data_num in zip(kind_of_data_list, kind_of_data_nums):
         data_nd_.append(np.mean(hatuwa, axis=0))
     data = data_nd_
 
+    data = data_nd_[:, 16 * 2:]
+
     output = clf.predict(data)
     # 正解率の計算
     batch_acc = [o == kind_of_data_num
